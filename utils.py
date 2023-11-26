@@ -1,3 +1,4 @@
+import copy
 import random
 import numpy as np
 from collections import defaultdict
@@ -47,9 +48,9 @@ def evaluate(model, dataset, sequence_length, isvalid=False):
 
     for u in users:
         # 判断是验证集还是测试集,如果训练集没有数据则跳过，如果验证集或者测试集没有数据则跳过
-        if isvalid and (len(train[u]) < 1 or len(test[u]) < 1):
+        if isvalid and (len(train[u]) < 1 or len(valid[u]) < 1):
             continue
-        elif not isvalid and (len(train[u]) < 1 or len(valid[u]) < 1):
+        elif not isvalid and (len(train[u]) < 1 or len(test[u]) < 1):
             continue
 
         # 初始化序列 根据原论文 如果真实交互的序列未达到指定步长，要使用填充项，即0进行填充 例如seq = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,item]
@@ -70,8 +71,11 @@ def evaluate(model, dataset, sequence_length, isvalid=False):
 
         # 取出训练集中的物品交互序列
         rated = set(train[u])
-        # 将测试集中的物品加入到候选物品集中
-        item_idx = [test[u][0]]
+        # 将物品加入到候选物品集中
+        if isvalid:
+            item_idx = [valid[u][0]]
+        else:
+            item_idx = [test[u][0]]
 
         # 在这里模仿pmixer的代码根据100个数量 选择候选物品集
         for _ in range(100):

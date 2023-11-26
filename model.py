@@ -33,21 +33,18 @@ class SASRec(nn.Module):
         # 以下分别是多头注意力机制和FFN的layerNorm、dropout和layer
         self.layerNorm_of_multi_head_attention_layers = nn.ModuleList()
         self.multi_head_attention_layers = nn.ModuleList()
-        self.dropout_of_multi_head_attention_layers = nn.ModuleList()
 
         self.layerNorm_of_FFN_layers = nn.ModuleList()
         self.FFN_layers = nn.ModuleList()
-        self.dropout_of_FFN_layers = nn.ModuleList()
 
+        self.drop = nn.Dropout(dropout_rate)
         # 根据块的数量构建block
         for _ in range(num_of_blocks):
             self.layerNorm_of_multi_head_attention_layers.append(nn.LayerNorm(hidden_units, eps=1e-8))
             self.multi_head_attention_layers.append(nn.MultiheadAttention(hidden_units, num_of_heads, dropout_rate))
-            self.dropout_of_multi_head_attention_layers.append(nn.Dropout(dropout_rate))
 
             self.layerNorm_of_FFN_layers.append(nn.LayerNorm(hidden_units, eps=1e-8))
             self.FFN_layers.append(FFN(hidden_units, dropout_rate))
-            self.dropout_of_FFN_layers.append(nn.Dropout(dropout_rate))
 
     def sasRecBlock(self, i, inputs, attention_mask):
         # 根据原论文构建sasRecBlock
@@ -56,14 +53,14 @@ class SASRec(nn.Module):
         inputs_norm = self.layerNorm_of_multi_head_attention_layers[i](inputs)
         attention_output, _ = self.multi_head_attention_layers[i](inputs_norm, inputs, inputs,
                                                                   attn_mask=attention_mask)
-        attention_output = self.dropout_of_multi_head_attention_layers[i](attention_output)
+        attention_output = self.drop(attention_output)
         # residual connection 残差连接
         attention_output += inputs
 
         # 先进行layerNorm然后再进行FFN最后再进行dropout
         inputs_norm = self.layerNorm_of_FFN_layers[i](attention_output)
         outputs = self.FFN_layers[i](inputs_norm)
-        outputs = self.dropout_of_FFN_layers[i](outputs)
+        outputs = self.drop(outputs)
         # residual connection 残差连接
         outputs += attention_output
         outputs = torch.transpose(outputs, 0, 1)
@@ -119,4 +116,3 @@ class SASRec(nn.Module):
         # 根据原论文的预测公式进行预测
         predictions = final_feat.matmul(item_embs)
         return predictions
-

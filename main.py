@@ -1,4 +1,6 @@
 import time
+
+import numpy as np
 import torch
 from model import SASRec
 from utils import *
@@ -63,7 +65,7 @@ if __name__ == '__main__':
     batch_size = 128
     epochs = 200
     hidden_units = 50
-    dropout_rate = 0.3
+    dropout_rate = 0.5
     num_of_blocks = 2
     num_of_heads = 1
     learning_rate = 0.001
@@ -110,6 +112,7 @@ if __name__ == '__main__':
             adam_optimizer.step()
 
         if epoch % 10 == 0:
+            model.eval()
             epoch_list.append(epoch)
             NDCG, HR = evaluate(model, [train_data, valid_data, test_data, user_num, item_num], sequence_length)
             NDCG_list.append(NDCG)
@@ -117,10 +120,12 @@ if __name__ == '__main__':
             print("epoch: ", epoch, " NDCG: ", NDCG, " HR: ", HR)
             f.write(f"epoch: {epoch}, NDCG: {NDCG},  HR: {HR},  loss: {loss.item()}\n")
             f.flush()
+            NDCG, HR = evaluate(model, [train_data, valid_data, test_data, user_num, item_num], sequence_length,True)
+            print("(validate)epoch: ", epoch, " NDCG: ", NDCG, " HR: ", HR)
+            model.train()
     f.close()
 
     plot_and_save(epoch_list, NDCG_list, "NDCG", "./saved_results/NDCG.png")
     plot_and_save(epoch_list, HR_list, "HR", "./saved_results/HR.png")
     print("Finished....")
     plt.close()
-
